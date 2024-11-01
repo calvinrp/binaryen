@@ -1,3 +1,5 @@
+# emcmake cmake -DBUILD_FOR_BROWSER=ON -DBUILD_EMSCRIPTEN_TOOLS_ONLY=ON -DBUILD_STATIC_LIB=ON -DBUILD_TESTS=OFF -DINSTALL_LIBS=OFF -DBYN_ENABLE_ASSERTIONS=OFF . && emmake make
+
 # Version set according the the cmake versions available in Ubuntu/Bionic:
 # https://packages.ubuntu.com/bionic/cmake
 cmake_minimum_required(VERSION 3.10.2)
@@ -351,9 +353,15 @@ if(EMSCRIPTEN)
   add_link_flag("-sSTACK_SIZE=5MB")
   if(EMSCRIPTEN_ENABLE_WASM_EH)
     add_compile_flag("-fwasm-exceptions")
+    add_link_flag("-fwasm-exceptions")
+    add_link_flag("-sEXPORT_EXCEPTION_HANDLING_HELPERS")
   else()
-    add_compile_flag("-sDISABLE_EXCEPTION_CATCHING=0")
-    add_link_flag("-sDISABLE_EXCEPTION_CATCHING=0")
+    add_compile_flag("-sDISABLE_EXCEPTION_CATCHING=1")
+    add_link_flag("-sDISABLE_EXCEPTION_CATCHING=1")
+    add_link_flag("-sIGNORE_CLOSURE_COMPILER_ERRORS=1")
+    #add_link_flag("-sEXPORT_EXCEPTION_HANDLING_HELPERS")
+    #add_compile_flag("-sDISABLE_EXCEPTION_CATCHING=0")
+    #add_link_flag("-sDISABLE_EXCEPTION_CATCHING=0")
   endif()
   if(EMSCRIPTEN_ENABLE_PTHREADS)
     add_compile_flag("-pthread")
@@ -370,13 +378,22 @@ if(EMSCRIPTEN)
   # for a commandline tool, so let the user run the main entry point themselves
   # and pass in the arguments there.
   if(BUILD_FOR_BROWSER)
-    add_link_flag("-sENVIRONMENT=web,worker")
-    add_link_flag("-sINVOKE_RUN=0")
-    add_link_flag("-sEXPORTED_RUNTIME_METHODS=run,callMain,FS")
-    add_link_flag("-sMODULARIZE")
-    add_link_flag("-sEXPORT_ES6")
+    add_link_flag("-sPURE_WASI=1")
+    #add_compile_flag("-Wno-unused-but-set-variable")
     add_link_flag("-sFILESYSTEM")
-    add_link_flag("-sFORCE_FILESYSTEM")
+    #add_link_flag("-sSTANDALONE_WASM=1")
+    #add_link_flag("-sEXPORTED_FUNCTIONS=_main")
+    #add_link_flag("-sIGNORE_MISSING_MAIN=1")
+    #add_link_flag("--no-entry")
+    add_link_flag("-Oz")
+    add_compile_flag("-Oz")
+    add_link_flag("-v")
+    #add_link_flag("-sENVIRONMENT=web,worker")
+    #add_link_flag("-sINVOKE_RUN=0")
+    #add_link_flag("-sEXPORTED_RUNTIME_METHODS=run,callMain,FS")
+    #add_link_flag("-sMODULARIZE")
+    #add_link_flag("-sEXPORT_ES6")
+    #add_link_flag("-sFORCE_FILESYSTEM")
   else()
     # On Node.js, make the tools immediately usable.
     add_link_flag("-sNODERAWFS")
@@ -477,87 +494,88 @@ endif()
 # in an incorrect way for emscripten.
 if(EMSCRIPTEN)
   # binaryen.js WebAssembly variant
-  add_executable(binaryen_wasm
-                 ${binaryen_SOURCES})
-  target_link_libraries(binaryen_wasm wasm asmjs emscripten-optimizer passes ir cfg support analysis parser wasm)
-  target_link_libraries(binaryen_wasm "-sFILESYSTEM")
-  target_link_libraries(binaryen_wasm "-sEXPORT_NAME=Binaryen")
-  target_link_libraries(binaryen_wasm "-sNODERAWFS=0")
-  # Do not error on the repeated NODERAWFS argument
-  target_link_libraries(binaryen_wasm "-Wno-unused-command-line-argument")
-  # Emit a single file for convenience of people using binaryen.js as a library,
-  # so they only need to distribute a single file.
-  if(EMSCRIPTEN_ENABLE_SINGLE_FILE)
-    target_link_libraries(binaryen_wasm "-sSINGLE_FILE")
-  endif()
-  target_link_libraries(binaryen_wasm "-sEXPORT_ES6")
-  target_link_libraries(binaryen_wasm "-sEXPORTED_RUNTIME_METHODS=stringToUTF8OnStack,stringToAscii")
-  target_link_libraries(binaryen_wasm "-sEXPORTED_FUNCTIONS=_malloc,_free")
-  target_link_libraries(binaryen_wasm "--post-js=${CMAKE_CURRENT_SOURCE_DIR}/src/js/binaryen.js-post.js")
-  target_link_libraries(binaryen_wasm "-msign-ext")
-  target_link_libraries(binaryen_wasm "-mbulk-memory")
-  target_link_libraries(binaryen_wasm optimized "--closure=1")
-  # TODO: Fix closure warnings! (#5062)
-  target_link_libraries(binaryen_wasm optimized "-Wno-error=closure")
-  target_link_libraries(binaryen_wasm optimized "-flto")
-  target_link_libraries(binaryen_wasm debug "--profiling")
-  # Avoid catching exit as that can confuse error reporting in Node,
-  # see https://github.com/emscripten-core/emscripten/issues/17228
-  target_link_libraries(binaryen_wasm "-sNODEJS_CATCH_EXIT=0")
-  install(TARGETS binaryen_wasm DESTINATION ${CMAKE_INSTALL_BINDIR})
+  #add_executable(binaryen_wasm
+  #               ${binaryen_SOURCES})
+  #target_link_libraries(binaryen_wasm wasm asmjs emscripten-optimizer passes ir cfg support analysis parser wasm)
+  #target_link_libraries(binaryen_wasm "-sFILESYSTEM")
+  #target_link_libraries(binaryen_wasm "-sPURE_WASI=1")
+  ##target_link_libraries(binaryen_wasm "-sEXPORT_NAME=Binaryen")
+  ##target_link_libraries(binaryen_wasm "-sNODERAWFS=0")
+  ## Do not error on the repeated NODERAWFS argument
+  #target_link_libraries(binaryen_wasm "-Wno-unused-command-line-argument")
+  ## Emit a single file for convenience of people using binaryen.js as a library,
+  ## so they only need to distribute a single file.
+  #if(EMSCRIPTEN_ENABLE_SINGLE_FILE)
+  #  target_link_libraries(binaryen_wasm "-sSINGLE_FILE")
+  #endif()
+  ##target_link_libraries(binaryen_wasm "-sEXPORT_ES6")
+  ##target_link_libraries(binaryen_wasm "-sEXPORTED_RUNTIME_METHODS=stringToUTF8OnStack,stringToAscii")
+  ##target_link_libraries(binaryen_wasm "-sEXPORTED_FUNCTIONS=_malloc,_free")
+  ##target_link_libraries(binaryen_wasm "--post-js=${CMAKE_CURRENT_SOURCE_DIR}/src/js/binaryen.js-post.js")
+  #target_link_libraries(binaryen_wasm "-msign-ext")
+  #target_link_libraries(binaryen_wasm "-mbulk-memory")
+  #target_link_libraries(binaryen_wasm optimized "--closure=1")
+  ## TODO: Fix closure warnings! (#5062)
+  #target_link_libraries(binaryen_wasm optimized "-Wno-error=closure")
+  #target_link_libraries(binaryen_wasm optimized "-flto")
+  #target_link_libraries(binaryen_wasm debug "--profiling")
+  ## Avoid catching exit as that can confuse error reporting in Node,
+  ## see https://github.com/emscripten-core/emscripten/issues/17228
+  ##target_link_libraries(binaryen_wasm "-sNODEJS_CATCH_EXIT=0")
+  #install(TARGETS binaryen_wasm DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-  # binaryen.js JavaScript variant
-  add_executable(binaryen_js
-                 ${binaryen_SOURCES})
-  target_link_libraries(binaryen_js wasm asmjs emscripten-optimizer passes ir cfg support analysis parser wasm)
-  target_link_libraries(binaryen_js "-sWASM=0")
-  target_link_libraries(binaryen_js "-sWASM_ASYNC_COMPILATION=0")
-  if(${CMAKE_CXX_COMPILER_VERSION} STREQUAL "6.0.1")
-    # only valid with fastcomp and WASM=0
-    target_link_libraries(binaryen_js "-sELIMINATE_DUPLICATE_FUNCTIONS")
-  endif()
-  # Disabling filesystem and setting web environment for js_of_ocaml
-  # so it doesn't try to detect the "node" environment
-  if(JS_OF_OCAML)
-    target_link_libraries(binaryen_js "-sFILESYSTEM=0")
-    target_link_libraries(binaryen_js "-sENVIRONMENT=web,worker")
-  else()
-    target_link_libraries(binaryen_js "-sFILESYSTEM=1")
-  endif()
-  target_link_libraries(binaryen_js "-sNODERAWFS=0")
-  # Do not error on the repeated NODERAWFS argument
-  target_link_libraries(binaryen_js "-Wno-unused-command-line-argument")
-  if(EMSCRIPTEN_ENABLE_SINGLE_FILE)
-    target_link_libraries(binaryen_js "-sSINGLE_FILE")
-  endif()
-  target_link_libraries(binaryen_js "-sEXPORT_NAME=Binaryen")
-  # Currently, js_of_ocaml can only process ES5 code
-  if(JS_OF_OCAML)
-    target_link_libraries(binaryen_js "-sEXPORT_ES6=0")
-  else()
-    target_link_libraries(binaryen_js "-sEXPORT_ES6=1")
-  endif()
-  target_link_libraries(binaryen_js "-sEXPORTED_RUNTIME_METHODS=stringToUTF8OnStack,stringToAscii")
-  target_link_libraries(binaryen_js "-sEXPORTED_FUNCTIONS=_malloc,_free")
-  target_link_libraries(binaryen_js "--post-js=${CMAKE_CURRENT_SOURCE_DIR}/src/js/binaryen.js-post.js")
-  # js_of_ocaml needs a specified variable with special comment to provide the library to consumers
-  if(JS_OF_OCAML)
-    target_link_libraries(binaryen_js "--extern-pre-js=${CMAKE_CURRENT_SOURCE_DIR}/src/js/binaryen.jsoo-extern-pre.js")
-  endif()
-  target_link_libraries(binaryen_js optimized "--closure=1")
-  # Currently, js_of_ocaml can only process ES5 code
-  if(JS_OF_OCAML)
-    target_link_libraries(binaryen_js optimized "--closure-args=\"--language_out=ECMASCRIPT5\"")
-  endif()
-  # TODO: Fix closure warnings! (#5062)
-  target_link_libraries(binaryen_js optimized "-Wno-error=closure")
-  target_link_libraries(binaryen_js optimized "-flto")
-  target_link_libraries(binaryen_js debug "--profiling")
-  target_link_libraries(binaryen_js debug "-sASSERTIONS")
-  # Avoid catching exit as that can confuse error reporting in Node,
-  # see https://github.com/emscripten-core/emscripten/issues/17228
-  target_link_libraries(binaryen_js "-sNODEJS_CATCH_EXIT=0")
-  install(TARGETS binaryen_js DESTINATION ${CMAKE_INSTALL_BINDIR})
+  ## binaryen.js JavaScript variant
+  #add_executable(binaryen_js
+  #               ${binaryen_SOURCES})
+  #target_link_libraries(binaryen_js wasm asmjs emscripten-optimizer passes ir cfg support analysis parser wasm)
+  #target_link_libraries(binaryen_js "-sWASM=0")
+  #target_link_libraries(binaryen_js "-sWASM_ASYNC_COMPILATION=0")
+  #if(${CMAKE_CXX_COMPILER_VERSION} STREQUAL "6.0.1")
+  #  # only valid with fastcomp and WASM=0
+  #  target_link_libraries(binaryen_js "-sELIMINATE_DUPLICATE_FUNCTIONS")
+  #endif()
+  ## Disabling filesystem and setting web environment for js_of_ocaml
+  ## so it doesn't try to detect the "node" environment
+  #if(JS_OF_OCAML)
+  #  target_link_libraries(binaryen_js "-sFILESYSTEM=0")
+  #  target_link_libraries(binaryen_js "-sENVIRONMENT=web,worker")
+  #else()
+  #  target_link_libraries(binaryen_js "-sFILESYSTEM=1")
+  #endif()
+  #target_link_libraries(binaryen_js "-sNODERAWFS=0")
+  ## Do not error on the repeated NODERAWFS argument
+  #target_link_libraries(binaryen_js "-Wno-unused-command-line-argument")
+  #if(EMSCRIPTEN_ENABLE_SINGLE_FILE)
+  #  target_link_libraries(binaryen_js "-sSINGLE_FILE")
+  #endif()
+  #target_link_libraries(binaryen_js "-sEXPORT_NAME=Binaryen")
+  ## Currently, js_of_ocaml can only process ES5 code
+  #if(JS_OF_OCAML)
+  #  target_link_libraries(binaryen_js "-sEXPORT_ES6=0")
+  #else()
+  #  target_link_libraries(binaryen_js "-sEXPORT_ES6=1")
+  #endif()
+  #target_link_libraries(binaryen_js "-sEXPORTED_RUNTIME_METHODS=stringToUTF8OnStack,stringToAscii")
+  #target_link_libraries(binaryen_js "-sEXPORTED_FUNCTIONS=_malloc,_free")
+  #target_link_libraries(binaryen_js "--post-js=${CMAKE_CURRENT_SOURCE_DIR}/src/js/binaryen.js-post.js")
+  ## js_of_ocaml needs a specified variable with special comment to provide the library to consumers
+  #if(JS_OF_OCAML)
+  #  target_link_libraries(binaryen_js "--extern-pre-js=${CMAKE_CURRENT_SOURCE_DIR}/src/js/binaryen.jsoo-extern-pre.js")
+  #endif()
+  #target_link_libraries(binaryen_js optimized "--closure=1")
+  ## Currently, js_of_ocaml can only process ES5 code
+  #if(JS_OF_OCAML)
+  #  target_link_libraries(binaryen_js optimized "--closure-args=\"--language_out=ECMASCRIPT5\"")
+  #endif()
+  ## TODO: Fix closure warnings! (#5062)
+  #target_link_libraries(binaryen_js optimized "-Wno-error=closure")
+  #target_link_libraries(binaryen_js optimized "-flto")
+  #target_link_libraries(binaryen_js debug "--profiling")
+  #target_link_libraries(binaryen_js debug "-sASSERTIONS")
+  ## Avoid catching exit as that can confuse error reporting in Node,
+  ## see https://github.com/emscripten-core/emscripten/issues/17228
+  #target_link_libraries(binaryen_js "-sNODEJS_CATCH_EXIT=0")
+  #install(TARGETS binaryen_js DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
 configure_file(scripts/binaryen-lit.in ${CMAKE_BINARY_DIR}/bin/binaryen-lit @ONLY)
